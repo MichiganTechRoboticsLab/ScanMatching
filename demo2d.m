@@ -1,4 +1,5 @@
 % 2D SLAM Demo 
+% Author: Dereck Wonnacott (2014)
 
 %
 % Generate the pose graph
@@ -6,12 +7,16 @@
 
 t = [0; 0; 0; 0]; % Starting Point
 
+TT = [0; 0; 0;];
+TR = zeros(3);
+
 for nScan = 2:size(LidarScan,1)
     % New Scan Data
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); % Data
     m = scan2cart(LidarAngles, LidarScan(nScan-1,:),LidarRange); % Model
   
     % Ground Truth Pose Data
+    if 1
         p1 = LidarPose(nScan - 1, :);
         p2 = LidarPose(nScan, :);
         dp = p2-p1;
@@ -19,10 +24,21 @@ for nScan = 2:size(LidarScan,1)
         % Rotate ground truth to current lidar frame.
         dp([1,2]) = rotate2d(p1(3), dp([1,2])');
         
+    % ICP
+    else
+        % This implementation requires 3D points
+        d = [d; zeros(1, size(d,2))];
+        m = [m; zeros(1, size(m,2))];
         
-    % ICP 
-        % This implementaiton requires 3D points
+        [tr, tt] = icp(m,d,30);
         
+        TT(:, nScan) = tt;
+        TR(:, :, nScan) = tr;
+        
+        dp    = real(tt);
+        dp(3) = -acos(tr(1));
+        dp(4) = 0; % Timestamp (isn't used yet)
+    end
     
     % Store the result in the pose graph
     t(:, nScan) = dp;
@@ -32,7 +48,7 @@ end
 %
 % Plot the scan matcher results frame by frame
 %
-if 0
+if 1
 for nScan = 2:size(LidarScan,1) 
     % read in the inputs
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); 

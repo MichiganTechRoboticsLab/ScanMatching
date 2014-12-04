@@ -1,4 +1,5 @@
 % Simulate a 2D robot
+% Author: Dereck Wonnacott (2014)
 
 %
 % Generate the virtual world (Ground Truth Map)
@@ -95,9 +96,10 @@ plot(LidarPose(:,1),LidarPose(:,2), '.r');
 
 % Generate Lidar Sensor measurements
 LidarRange = 4.0;
-LidarAngles = deg2rad(-135):deg2rad(5):deg2rad(135);
-LidarScan = [];
-for n = 1:size(LidarPose,1) % For each pose
+LidarAngles = deg2rad(-135):deg2rad(1):deg2rad(135);
+LidarScan = zeros(size(LidarPose,1), size(LidarAngles,2));
+
+parfor n = 1:size(LidarPose,1) % For each pose
     p = LidarPose(n,:); % Current pose
     z = []; % Current scan
     
@@ -126,7 +128,7 @@ for n = 1:size(LidarPose,1) % For each pose
         z = cat(2, z, r);
     end
     
-    LidarScan = cat(1, LidarScan, z);
+    LidarScan(n,:) = z;
 end    
    
 % Plot the Lidar Measurements
