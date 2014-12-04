@@ -46,17 +46,24 @@ close(h);
 %
 % Plot the Pose Graph
 %
-figure(5)
+figure(3)
 clf;
-plot(PoseGraph(1,:));
-hold on
-plot(PoseGraphTruth(1,:));
+subplot(2,1,1);
+err = sqrt( (PoseGraphTruth(1,:) - PoseGraph(1,:)).^2 + (PoseGraphTruth(2,:) - PoseGraph(2,:)).^2 );
+plot(err);
+title('Translation Error');
+
+subplot(2,1,2);
+err = PoseGraphTruth(3,:) - PoseGraph(3,:);
+plot(err);
+title('Rotation Error');
+
 
 %
 % Plot the scan matcher results frame by frame
 %
 if 0
-    h = figure(3);
+    h = figure(4);
     for nScan = 2:size(LidarScan,1) 
         % read in the inputs
         d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); 
@@ -132,7 +139,7 @@ end
 %
 % Plot the map
 %
-figure(4);
+figure(5);
 clf;
 plot(traj(1,:), traj(2,:), '-r');
 hold on;
