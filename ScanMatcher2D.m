@@ -5,59 +5,46 @@
 clear
 load('../datasets/Sim World 1 - 025Deg - 10Hz.mat');
 
-% Add libraries
-addpath('./libicp/matlab/');
-
-
 %
 % Generate the pose graph
 %
 PoseGraph = zeros(4,size(LidarScan,1));
-
+h = waitbar(0,'Initializing waitbar...');
 
 for nScan = 2:size(LidarScan,1)
+    % Status
+    progress = nScan/size(LidarScan,1);
+    waitbar(progress,h, ['Generating PoseGraph (' num2str(progress*100) '%)'] )
+    
     % New Scan Data
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:), LidarRange); % Data
     m = scan2cart(LidarAngles, LidarScan(nScan-1,:), LidarRange); % Model
   
-   
     % Ground Truth Data
-    if 1
+    if 0
         p1 = LidarPose(nScan - 1, :);
         p2 = LidarPose(nScan, :);
         dp = p2-p1;
 
         % Rotate ground truth to current lidar frame.
         dp([1,2]) = rotate2d(p1(3), dp([1,2])');
-
-        % Rotate the data points to the expected rotation
-        dm = rotate2d(-PoseGraph(3, nScan), d([1 2],:));
-
-        % Translate the new points to the expected location
-        dm(1,:) = dm(1,:) + PoseGraph(1, nScan);
-        dm(2,:) = dm(2,:) + PoseGraph(2, nScan);
-    end
-    
-    % For implementations that require 3D points
-    if 0
-        d  = [d; zeros(1, size(d,2))];
-        m  = [m; zeros(1, size(m,2))];
-        dm = [dm; zeros(1, size(dm,2))];
     end
 
-    %ICP1 [tr, tt] = icp(m,dm,15, 'Minimize', 'point');
-    %ICP2 [tr, tt] = icp(m,dm);
-    Tr_fit = icpMex(m,dm,eye(3),-1,'point_to_plane');
-    tt = Tr_fit([1 2], 3);
-    tr = Tr_fit([1 2], [1 2]);
-    
-    dp    = real(tt);
-    dp(3) = -acos(tr(1));
-    dp(4) = 0; % Timestamp (isn't used yet)
+    if 1
+        %ICP 
+        %[tr, tt] = call_icp1(m,d);
+        %[tr, tt] = call_icp2(m,d);
+        [tr, tt] = call_libicp(m,d);
+
+        dp    = real(tt);
+        dp(3) = -acos(tr(1));
+        dp(4) = 0; % Timestamp (isn't used yet)
+    end
     
     % Store the result in the pose graph
     PoseGraph(:, nScan) = dp;
 end
+close(h);
 
 
 %
@@ -95,6 +82,7 @@ if 0
         pause(1/LidarHz);
     end
 end
+
 
 %
 % Generate the trajectory from the pose graph
