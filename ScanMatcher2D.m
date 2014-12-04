@@ -8,6 +8,7 @@ load('../datasets/Sim World 1 - 025Deg - 10Hz.mat');
 %
 % Generate the pose graph
 %
+PoseGraphTruth = zeros(4,size(LidarScan,1));
 PoseGraph = zeros(4,size(LidarScan,1));
 h = waitbar(0,'Initializing waitbar...');
 
@@ -19,33 +20,37 @@ for nScan = 2:size(LidarScan,1)
     % New Scan Data
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:), LidarRange); % Data
     m = scan2cart(LidarAngles, LidarScan(nScan-1,:), LidarRange); % Model
-  
+
     % Ground Truth Data
-    if 0
+    if 1
         p1 = LidarPose(nScan - 1, :);
         p2 = LidarPose(nScan, :);
-        dp = p2-p1;
+        PoseGraphTruth(:, nScan) = (p2-p1)';
 
         % Rotate ground truth to current lidar frame.
-        dp([1,2]) = rotate2d(p1(3), dp([1,2])');
-    end
-
-    if 1
-        %ICP 
-        %[tr, tt] = call_icp1(m,d);
-        %[tr, tt] = call_icp2(m,d);
-        [tr, tt] = call_libicp(m,d);
-
-        dp    = real(tt);
-        dp(3) = -acos(tr(1));
-        dp(4) = 0; % Timestamp (isn't used yet)
+        PoseGraphTruth([1,2], nScan) = rotate2d(p1(3), PoseGraphTruth([1,2], nScan));
     end
     
+    %ICP 
+    %[tr, tt] = call_icp1(m,d);
+    %[tr, tt] = call_icp2(m,d);
+    [tr, tt] = call_libicp(m,d);
+
     % Store the result in the pose graph
-    PoseGraph(:, nScan) = dp;
+    PoseGraph([1 2], nScan) = tt([1 2]);
+    PoseGraph(3, nScan)     = -acos(tr(1));
+    PoseGraph(4, nScan)     = 1/LidarHz;
 end
 close(h);
 
+%
+% Plot the Pose Graph
+%
+figure(5)
+clf;
+plot(PoseGraph(1,:));
+hold on
+plot(PoseGraphTruth(1,:));
 
 %
 % Plot the scan matcher results frame by frame
