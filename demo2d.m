@@ -1,157 +1,114 @@
-% Simulate a 2D robot
+% 2D SLAM Demo 
 
 %
-% Generate the virtual world (Ground Truth Map)
+% Generate the pose graph
 %
 
-% W is an array of objects in the map
-% Each object is a polyline stored in a 2xn matrix
-% Where n is the number of line endpoints
-% the first row is the x coordinates
-% the second row is the y coordinates. 
-W{1} = [0 0 5 5 0;
-        0 5 5 0 0];
+t = [0; 0; 0; 0]; % Starting Point
+
+for nScan = 2:size(LidarScan,1)
+    % New Scan Data
+    d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); % Data
+    m = scan2cart(LidarAngles, LidarScan(nScan-1,:),LidarRange); % Model
+  
+    % Ground Truth Pose Data
+        p1 = LidarPose(nScan - 1, :);
+        p2 = LidarPose(nScan, :);
+        dp = p2-p1;
+
+        % Rotate ground truth to current lidar frame.
+        theta = -p1(3);
+        dpx = dp(1)*cos(theta) - dp(2)*sin(theta);
+        dpy = dp(1)*sin(theta) + dp(2)*cos(theta);
+        dp(1) = dpx;
+        dp(2) = dpy;
     
-W{2} = [1 1 2 2 1;
-        1 3 3 1 1];
-    
-W{3} = [3 4 4 3 3;
-        3 3 4 4 3];
-
-% Plot the world
-figure(1); 
-clf;
-title('World Map');
-for i = 1:length(W)
-    line(W{i}(1,:), W{i}(2,:))
-end
-hold on;
-axis equal
-grid
-
-
-%
-% Generate Robot Path (Ground Truth)
-%
-
-% Robot Trajectory 
-% [x, y, Theta]
-T = [0.5, 0.5, deg2rad(90);
-     0.5, 4.0, deg2rad(90);
-     0.5, 4.0, 0;
-     2.5, 4.0, 0];
-
-Vp = 0.5;  % Linear Velocity (Units/Second)
-Vr = deg2rad(45); % Rotational velocity (Rad/Second)
-
-% Plot Trajectory
-figure(1);
-plot(T(:,1)', T(:,2)', '-r');
-
-
-% Generate timestamps for each trajectory vertex
-tt = 0;
-for i = 1:(length(T)-1)
-   dp = sqrt((T(i,1) - T(i+1,1))^2 + (T(i,2) - T(i+1,2))^2);
-   tp = dp/Vp;
-   
-   dr = T(i,3) - T(i+1,3); 
-   tr = dr/Vr;   
-   
-   t  = max(tp, tr); 
-   tt = cat(2, tt, t);
-end 
-T = cat(2, T, tt');
-
-
-%
-% Generate Lidar Data
-%
-
-Hz = 5; % Samples Per Second
-
-% lidar poses
-LidarPose = []; 
-
-i = 1;
-for i = 1:(length(T)-1)
-    x  = [0; tt(i+1)];
-    xx = x(1):1/Hz:x(2);
-   
-    y  = [T(i,1); T(i+1,1)];
-    px = linterp(x,y,xx);
-    
-    y  = [T(i,2); T(i+1,2)];
-    py = linterp(x,y,xx);
-    
-    y  = [T(i,3); T(i+1,3)];
-    pr = linterp(x,y,xx);
-    
-    LidarPose = cat(1, LidarPose, [px' py' pr' xx']);
+    % Store the result in the pose graph
+    t(:, nScan) = dp;
 end
 
-plot(LidarPose(:,1),LidarPose(:,2), '.r');
 
+%
+% Plot the scan matcher results frame by frame
+%
+if 0
+for nScan = 2:size(LidarScan,1) 
+    % read in the inputs
+    d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); 
+    m = scan2cart(LidarAngles, LidarScan(nScan-1,:),LidarRange); 
 
+    % Rotate the new points
+    dm = rotate2d(-t(3, nScan), d);
+    
+    % Translate the new points
+    dm(1,:) = dm(1,:) + t(1, nScan);
+    dm(2,:) = dm(2,:) + t(2, nScan);
 
-% Generate Lidar Sensor measurements
-LidarRange = 4.0;
-LidarAngles = deg2rad(-135):deg2rad(5):deg2rad(135);
-LidarScan = [];
-for n = 1:size(LidarPose,1) % For each pose
-    p = LidarPose(n,:); % Current pose
-    z = []; % Current scan
-    
-    for i = 1:length(LidarAngles); % For each beam
-        r = LidarRange; % Max Range
-        a = LidarAngles(i); % Current Angle
-
-        % find endpoints of this beam
-        beam = [p(1), p(1)+r*cos(p(3)+a); p(2), p(2)+r*sin(p(3)+a)];
-
-        % Search if this range measurement intersects any map line
-        for j = 1:length(W)
-            [xi, yi] = polyxpoly(W{j}(1,:), W{j}(2,:), beam(1,:), beam(2,:)); 
-            if ~isempty(xi)
-                % Find the closest intersecetion
-                for k = 1:length(xi)
-                    d = sqrt((p(1) - xi(k)).^2 + (p(2) - yi(k)).^2);
-                    if d < r 
-                        r = d;
-                    end
-                end
-            end
-        end
-        
-        % Add this measurement to the scan
-        z = cat(2, z, r);
-    end
-    
-    LidarScan = cat(1, LidarScan, z);
-    
-   
-    
-    % Show the Lidar Measurement
-    %  Remove out of range measurements
-    a = LidarAngles;
-    z = LidarScan(end, :);
-    I = (z >= LidarRange);
-    a(I) = [];
-    z(I) = [];
-    
     % Plot
-    figure(2)
+    figure(3);
     clf
-    polar(a, z, '.b')
-    
-    pause(1/Hz);
-    
+    plot(m(1,:), m(2,:), '.b');
+    hold on
+    plot(d(1,:), d(2,:), 'Ok');
+    plot(dm(1,:), dm(2,:), 'Or');
+    axis equal
+    grid
+    title('Scan Matcher Inputs');
+    legend('Model', 'Input', 'Output')
+    pause(1/LidarHz);
+end
+end
+
+%
+% Generate the trajectory from the pose graph
+%
+traj = t(:,1);
+for i = 2:size(t,2)
+    p  = traj([1, 2], i-1);
+    dp = rotate2d(-traj(3, i-1), t([1,2],i));
+
+    traj([1, 2], i) = p + dp;
+    traj([3, 4], i) = traj([3, 4], i-1) + t([3, 4],i);
 end
 
 
+%
+% Generate the map
+%
+Map  = [];
+for nScan = 1:size(LidarScan,1)
+    scan = LidarScan(nScan,:);
+    a    = LidarAngles;
+        
+    % Remove out of range measurements
+    I = (scan >= LidarRange);
+    scan(I) = [];
+    a(I)    = [];
+    
+    % Rotation
+    a = a + traj(3, nScan);
+    [x, y] = pol2cart(a, scan);
+
+    % Translation
+    x = x + traj(1, nScan);
+    y = y + traj(2, nScan);
+    d = [x; y];
+
+    % Add points to map.
+    Map = cat(2, Map, d);
+end
 
 
-
+%
+% Plot the map
+%
+figure(4);
+clf;
+plot(traj(1,:), traj(2,:), '-r');
+hold on;
+grid;
+axis equal;
+plot(Map(1,:), Map(2,:), '.k')
 
 
 
