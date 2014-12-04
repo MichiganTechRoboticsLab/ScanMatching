@@ -17,11 +17,12 @@ for nScan = 2:size(LidarScan,1)
         dp = p2-p1;
 
         % Rotate ground truth to current lidar frame.
-        theta = -p1(3);
-        dpx = dp(1)*cos(theta) - dp(2)*sin(theta);
-        dpy = dp(1)*sin(theta) + dp(2)*cos(theta);
-        dp(1) = dpx;
-        dp(2) = dpy;
+        dp([1,2]) = rotate2d(p1(3), dp([1,2])');
+        
+        
+    % ICP 
+        % This implementaiton requires 3D points
+        
     
     % Store the result in the pose graph
     t(:, nScan) = dp;
