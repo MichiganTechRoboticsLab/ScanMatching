@@ -1,6 +1,14 @@
 % 2D SLAM Demo 
 % Author: Dereck Wonnacott (2014)
 
+% Load dataset
+clear
+load('../datasets/Sim World 1 - 025Deg - 10Hz.mat');
+
+% Add libraries
+addpath('./libicp/matlab/');
+
+
 %
 % Generate the pose graph
 %
@@ -39,7 +47,7 @@ for nScan = 2:size(LidarScan,1)
 
     %ICP1 [tr, tt] = icp(m,dm,15, 'Minimize', 'point');
     %ICP2 [tr, tt] = icp(m,dm);
-    Tr_fit = icpMex(m,d,eye(3),-1,'point_to_plane');
+    Tr_fit = icpMex(m,dm,eye(3),-1,'point_to_plane');
     tt = Tr_fit([1 2], 3);
     tr = Tr_fit([1 2], [1 2]);
     
@@ -55,7 +63,8 @@ end
 %
 % Plot the scan matcher results frame by frame
 %
-if 1
+if 0
+    h = figure(3);
     for nScan = 2:size(LidarScan,1) 
         % read in the inputs
         d = scan2cart(LidarAngles, LidarScan(nScan  ,:),LidarRange); 
@@ -68,8 +77,8 @@ if 1
         dm(1,:) = dm(1,:) + PoseGraph(1, nScan);
         dm(2,:) = dm(2,:) + PoseGraph(2, nScan);
 
-        % Plot
-        figure(3);
+        % Plot        
+        set(0, 'CurrentFigure', 3);
         clf
         plot(m(1,:), m(2,:), '.b');
         hold on
@@ -77,9 +86,13 @@ if 1
         plot(dm(1,:), dm(2,:), 'Or');
         axis equal
         grid
-        title('Scan Matcher Inputs');
+        title(['Scan Matcher Inputs (' num2str(nScan) ')' ]);
         legend('Model', 'Input', 'Output')
-        pause(1/LidarHz+1);
+        
+        % Save to disk
+        %saveas(h, ['../images/' num2str(nScan) '.png'])
+        
+        pause(1/LidarHz);
     end
 end
 
