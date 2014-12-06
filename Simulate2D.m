@@ -69,7 +69,7 @@ Path = cat(2, Path, tt');
 % Generate Lidar Data
 %
 
-LidarHz = 10; % Samples Per Second
+LidarHz = 5; % Samples Per Second
 
 % lidar poses
 LidarPose = []; 
@@ -96,7 +96,7 @@ plot(LidarPose(:,1),LidarPose(:,2), '.r');
 
 % Generate Lidar Sensor measurements
 LidarRange = 4.0;
-LidarAngles = deg2rad(-135):deg2rad(0.25):deg2rad(135);
+LidarAngles = deg2rad(-135):deg2rad(5):deg2rad(135);
 LidarScan = zeros(size(LidarPose,1), size(LidarAngles,2));
 
 parfor n = 1:size(LidarPose,1) % For each pose

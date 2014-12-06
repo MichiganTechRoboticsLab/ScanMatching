@@ -3,48 +3,43 @@
 
 % Load dataset
 clear
-load('../datasets/Sim World 1 - 025Deg - 10Hz.mat');
+load('../datasets/Sim World 1 - 5Deg - 5Hz.mat');
 
 %
 % Generate the pose graph
 %
-PoseGraphTruth = zeros(4,size(LidarScan,1));
 PoseGraph = zeros(4,size(LidarScan,1));
-h = waitbar(0,'Initializing waitbar...');
 
 for nScan = 2:size(LidarScan,1)
-    % Status
-    progress = nScan/size(LidarScan,1);
-    waitbar(progress,h, ['Generating PoseGraph (' num2str(progress*100) '%)'] )
-    
     % New Scan Data
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:), LidarRange); % Data
     m = scan2cart(LidarAngles, LidarScan(nScan-1,:), LidarRange); % Model
-
-    % Ground Truth Data
-    if 1
-        p1 = LidarPose(nScan - 1, :);
-        p2 = LidarPose(nScan, :);
-        PoseGraphTruth(:, nScan) = (p2-p1)';
-
-        % Rotate ground truth to current lidar frame.
-        PoseGraphTruth([1,2], nScan) = rotate2d(p1(3), PoseGraphTruth([1,2], nScan));
-    end
     
     %ICP 
     %[tr, tt] = call_icp1(m,d);
     %[tr, tt] = call_icp2(m,d);
-    [tr, tt] = call_libicp(m,d);
+    %[tr, tt] = call_libicp(m,d);
+    [tr, tt] = call_icp3(m,d);
 
     % Store the result in the pose graph
-    PoseGraph([1 2], nScan) = tt([1 2]);
-    PoseGraph(3, nScan)     = -acos(tr(1));
-    PoseGraph(4, nScan)     = 1/LidarHz;
+    PoseGraph(:, nScan) = [tt(1); tt(2); -acos(tr(1)); 1/LidarHz;] 
 end
-close(h);
+
+
+% Ground Truth PoseGraph
+PoseGraphTruth = zeros(4,size(LidarScan,1));
+for nScan = 2:size(LidarScan,1)
+    p1 = LidarPose(nScan - 1, :);
+    p2 = LidarPose(nScan, :);
+    PoseGraphTruth(:, nScan) = (p2-p1)';
+
+    % Rotate ground truth to current lidar frame.
+    PoseGraphTruth([1,2], nScan) = rotate2d(p1(3), PoseGraphTruth([1,2], nScan));
+end
+
 
 %
-% Plot the Pose Graph
+% Plot the Pose Graph Error
 %
 figure(3)
 clf;
@@ -77,7 +72,7 @@ if 0
         dm(2,:) = dm(2,:) + PoseGraph(2, nScan);
 
         % Plot        
-        set(0, 'CurrentFigure', 3);
+        set(0, 'CurrentFigure', 4);
         clf
         plot(m(1,:), m(2,:), '.b');
         hold on
