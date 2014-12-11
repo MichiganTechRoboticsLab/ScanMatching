@@ -1,3 +1,6 @@
+%This is the first attempt at writing an icp algorithm using icp_1
+%It takes the approach of 
+
 clear all
 close all
 clc
@@ -6,8 +9,6 @@ load newdata.mat
 %full map
 map = [];
 
-%n = size(LidarScan,1);
-n = 1000;
 est_x = [0;0];
 est_dx = [];
 est_theta = 0;
@@ -18,7 +19,7 @@ est_dtheta = 0;
 %second, so anything less the that should be noted.
 error_dtheta = deg2rad(3);
 
-for nScan = 55:2:n
+for nScan = 55:2:size(LidarScan,1)
     
     theta = LidarPose(nScan,3);
     a = LidarAngles;
