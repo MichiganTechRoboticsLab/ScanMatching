@@ -3,6 +3,8 @@ function [ t, q, s ] = minimize( m, d )
 % with known correspondances based on:
 % [1] Closed-form solution of absolute orientation using unit quaternions
 %
+% Author: Dereck Wonnacott (2014)
+%
 % Inputs:
 %   m - 3xN matrix of fixed 3D points
 %   d - 3xN matrix of transformed 3D points to be matched to m
@@ -25,9 +27,10 @@ function [ t, q, s ] = minimize( m, d )
     m1 = m - repmat(um,1,Np);
     d1 = d - repmat(ud,1,Np);
 
-    % Scale
-    s = 1/sqrt(sum(d1.^2) / sum(m1.^2));
-
+    % Scale (Disabled)
+    %s = 1/sqrt(sum(d1.^2) / sum(m1.^2));
+    s = 1;
+    
     d2 = s*d1;
 
 
@@ -54,11 +57,12 @@ function [ t, q, s ] = minimize( m, d )
     [~, I] = max(max(e));
     q = v(:,I);
 
+    
     % Find the final translation
-    % Remove rotation and scale
+    % Apply known rotation and scale
     d4 = s*quatrotate(q',d')';
 
-    % calculate the centroid
+    % Final translation
     t = mean(d4,2) - um;
 
     

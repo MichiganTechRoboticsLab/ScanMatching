@@ -1,5 +1,5 @@
 % 2D SLAM Demo 
-% Author: Dereck Wonnacott (2014)
+% Author: D5ereck Wonnacott (2014)
 
 % Load dataset
 clear
@@ -11,6 +11,9 @@ load('../datasets/Sim World 1 - 5Deg - 5Hz.mat');
 PoseGraph = zeros(4,size(LidarScan,1));
 
 for nScan = 2:size(LidarScan,1)
+    % Status
+    disp(['Scan ' num2str(nScan) ' of ' num2str(size(LidarScan,1)) '.']);
+    
     % New Scan Data
     d = scan2cart(LidarAngles, LidarScan(nScan  ,:), LidarRange); % Data
     m = scan2cart(LidarAngles, LidarScan(nScan-1,:), LidarRange); % Model
@@ -22,7 +25,7 @@ for nScan = 2:size(LidarScan,1)
     [tr, tt] = call_icp3(m,d);
 
     % Store the result in the pose graph
-    PoseGraph(:, nScan) = [tt(1); tt(2); -acos(tr(1)); 1/LidarHz;] 
+    PoseGraph(:, nScan) = [tt(1); tt(2); -acos(tr(1)); 1/LidarHz;];
 end
 
 
@@ -74,9 +77,9 @@ if 0
         % Plot        
         set(0, 'CurrentFigure', 4);
         clf
-        plot(m(1,:), m(2,:), '.b');
+        plot(m(1,:), m(2,:), '+b');
         hold on
-        plot(d(1,:), d(2,:), 'Ok');
+        plot(d(1,:), d(2,:), '.k');
         plot(dm(1,:), dm(2,:), 'Or');
         axis equal
         grid
@@ -86,7 +89,7 @@ if 0
         % Save to disk
         %saveas(h, ['../images/' num2str(nScan) '.png'])
         
-        pause(1/LidarHz);
+        pause(1/LidarHz+1);
     end
 end
 

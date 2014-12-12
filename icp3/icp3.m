@@ -1,4 +1,4 @@
-%function [ tr, tt ] = icp3(m, d)
+function [ t, q, s ] = icp3(m, d)
 %ICP Ittertive Closest Point
 %   Author: Dereck Wonnacott (2014)
 %   
@@ -7,72 +7,59 @@
 %
 %   
 
-if 1
-    clear
-    load('SimpleTest1.mat') % m, d
-end
-
-% 3D points are required for this implementation
-if(size(m,1) == 2)
-    m = [m; zeros(1, size(m,2))];
-end
-if(size(d,1) == 2)
-    d = [d; zeros(1, size(d,2))];
-end
-
-% Itteration
-D = d;
-for k = 1:15
-    k 
-    
-    % For each point in d find closest point in m
-    Mdist = zeros(size(D,2), size(m,2));
-
-    for i=1:size(D,2)
-        dp = D(:,i);
-
-        for j=1:size(m,2)
-            mp = m(:,j); 
-
-            Mdist(i, j) = sum((dp - mp).^2); % d^2 should be fine
-        end    
+    if 0 
+        clear
+        load('SimpleTest1.mat') % m, d
     end
-    [V, I] = min(Mdist, [], 2);
-    err(k) = sum(sum(Mdist));
-    
 
-    % Solve the transform between the point sets
-    [ t, q, s ] = minimize(m(:,I), D);
-   
+    % 3D points are required for this implementation
+    if(size(m,1) == 2)
+        m = [m; zeros(1, size(m,2))];
+    end
+    if(size(d,1) == 2)
+        d = [d; zeros(1, size(d,2))];
+    end
+
+    % Itteration
+    D = d;
+    for k = 1:15
+        % Find the point corrispondances
+        I = match(m, D);
+
+        % Solve the transform between the point sets
+        [ t, q, s ] = minimize(m(:,I), D);
+
+        % Final Solution
+        D = s * quatrotate(q',D')' - repmat(t, 1, size(D,2));
+    end
+
+    % Final solution
+    [ t, q, s ] = minimize(D, d);
+    D2 = s * quatrotate(q',d')' - repmat(t, 1, size(d,2));
     
-    % Final Solution
-    D = s * quatrotate(q',D')' - repmat(t, 1, size(D,2));
-end   
-   
     
+    return
     
     % Debug Plot ( Input Data)
     figure(1);
     clf
-    plot(m(1,:),m(2,:),'.b');
+    plot3(m(1,:),m(2,:),m(3,:),'+b', 'MarkerSize', 7);
     hold on;
-    plot(d(1,:),d(2,:),'.r');
+    plot3(d(1,:),d(2,:),d(3,:),'.r', 'MarkerSize', 7);
+    plot3(D2(1,:),D2(2,:),D2(3,:),'Or');
     axis equal
     grid
-    title(['Input' num2str(k)]);
+    title(['ICP Result k = ' num2str(k)]);
     
-    % Debug Plot - Result    
-    figure(2);
-    clf
-    plot(m(1,:),m(2,:),'.b');
-    hold on;
-    plot3(D(1,:),D(2,:),D(3,:),'.r');
-    axis equal
-    grid
-    title(['Output' num2str(k)]);
-
-
-%end
+    % Plot correspondence
+    for i = 1:size(I,1)
+        plot3([m(1,I(i)) D(1,i)], [m(2,I(i)) D(2,i)], [m(3,I(i)) D(3,i)], 'r'); 
+        plot3([m(1,I(i)) d(1,i)], [m(2,I(i)) d(2,i)], [m(3,I(i)) d(3,i)], 'b'); 
+    end
+    
+    legend('Model', 'Data', 'Result');
+    
+end
 
 
 

@@ -8,7 +8,12 @@ function [ tr, tt ] = call_icp3( m, d )
     end
     
     % Do it!
-    [tr, tt] = icp3(m,d);
+    [ tt, q, ~ ] = icp3(m,d);
     
+    % Convert from quaterion to rotation matrix
+    [az, ay, ax] = quat2angle(q');
+    tr = rotx(-ax) * roty(-ay) * rotz(-az);
+    
+    tt = -tt;
 end
 
