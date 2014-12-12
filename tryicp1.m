@@ -6,7 +6,7 @@ clc
 load newdata.mat
 
 %add some noise to our data
-%LidarScan = LidarScan.*normrnd(1,0.01,size(LidarScan,1),size(LidarScan,2));
+LidarScan = LidarScan.*normrnd(1,0.01,size(LidarScan,1),size(LidarScan,2));
 
 offset=[0;0;0];
 cur=offset;
@@ -26,7 +26,7 @@ lidarRange = 4;
 %radius to filter out points when running icp
 filter_radius = lidarRange*1.2;
 
-for nScan = 1:2:size(LidarScan,1)
+for nScan = 1:5:size(LidarScan,1)
 
     disp = [[0 1];[0 0]];
     
@@ -35,7 +35,7 @@ for nScan = 1:2:size(LidarScan,1)
     z = LidarScan(nScan, :);
 
     %  Remove out of range measurements
-    I = (z >= LidarRange);
+    I = (z >= LidarRange*0.9);
     a(I) = [];
     z(I) = [];
 
