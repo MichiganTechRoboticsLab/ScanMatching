@@ -14,7 +14,7 @@ for ii=1:size(q,2);
     [d,~] = min((p(1,:)-x).^2 + (p(2,:)-y).^2);
     d = sqrt(d);
     if d < error
-        ret = [ret [x;y]];
+        ret = [ret real([x;y])];
     end
 end
 figure(2)
