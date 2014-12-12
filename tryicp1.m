@@ -12,12 +12,9 @@ path=[0;0];
 map = [];
 
 %estimated pose for the robot in the world
-est_x = [0;0];
-est_dx = [];
 est_theta = 0;
 est_dtheta = 0;
 
-last_est_dx=[0;0];
 last_est_dtheta=0;
 
 %minimum turn, this is the error for sensing if the robot is actually
@@ -44,7 +41,7 @@ for nScan = 55:2:size(LidarScan,1)
     raw = [x;y];
     
     %used to keep track of everything
-    disp = [0;0];
+    disp = [[0 0];[0 1]];
 
     if isempty(map)
         map = [map raw];
@@ -61,11 +58,10 @@ for nScan = 55:2:size(LidarScan,1)
         TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
         %TR = eye(2);
         raw = TR*raw + TT;
-        disp = TR*disp + TT(:,1);
+        disp = TR*disp + TT(:,1:2);
     end
     
     %sest the estimated pose diff to zero
-    est_dx = [0;0];
     est_dtheta = 0;
     
     ii = 0;
@@ -84,9 +80,8 @@ for nScan = 55:2:size(LidarScan,1)
         TT = repmat(TT(1:2), 1, size(raw,2));
 
         raw = real(TR * raw + TT);
-        disp = real(TR * disp + TT(:,1));
+        disp = real(TR * disp + TT(:,1:2));
 
-        est_dx = est_dx + TT(:,1);
         est_dtheta = est_dtheta + acos(TR(1,1));
         
         %get the difference in TT so we know when to converge the icp
@@ -102,15 +97,7 @@ for nScan = 55:2:size(LidarScan,1)
             converge_metric = 1e-6;
             if abs(dTT) < converge_metric
                 
-                
-                %update our state estimates
-                %if mag(est_dx + last_est_dx) > 1e-5
-                %    new_x = est_x(:,end) + est_dx + last_est_dx;
-                %else
-                %    new_x = est_x(:,end);
-                %end
-                
-                path = [path disp];
+                path = [path disp(:,1)];
                 %est_x = [est_x new_x];
 
                 %make sure our theta diff isn't just noise.  I still need
