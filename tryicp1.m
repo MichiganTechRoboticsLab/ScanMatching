@@ -6,7 +6,8 @@ close all
 clc
 load newdata.mat
 
-path=[0;0];
+pose=[0;0;0];
+post_dot=[];
 
 %full map
 map = [];
@@ -17,6 +18,9 @@ est_dtheta = 0;
 
 last_est_dtheta=0;
 
+%used to keep track of everything
+last_disp = [];
+
 %minimum turn, this is the error for sensing if the robot is actually
 %turning or not.  I know that the robot currently turns at 45 degrees per
 %second, so anything less the that should be noted.
@@ -24,8 +28,10 @@ error_dtheta = deg2rad(3);
 
 %I started at 55 because that's a nice place to see a small forward and
 %turn going on
-for nScan = 55:2:size(LidarScan,1)
-    
+for nScan = 1:2:size(LidarScan,1)
+
+    disp = [[0 0];[0 1]];
+
     %Grab lidar angles and the scan
     a = LidarAngles;
     z = LidarScan(nScan, :);
@@ -39,24 +45,20 @@ for nScan = 55:2:size(LidarScan,1)
 
     %fill the map if it doesn't exist yet.
     raw = [x;y];
-    
-    %used to keep track of everything
-    disp = [[0 0];[0 1]];
 
     if isempty(map)
         map = [map raw];
     else
  
     %if ~isempty(est_dx)
-    if size(path,2) > 1
+    if size(pose,2) > 1
         %make a quick guess based on the estimated dx
-        %last_est_dx=est_dx;
         last_est_dtheta=est_dtheta;
-        %TT = repmat(est_x(:,end) + last_est_dx, 1, size(raw,2));
-        TT = repmat(path(:,end) + (path(:,end) - path(:,end-1)), 1, size(raw,2));
+        
+        TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
         phi = -(est_theta + last_est_dtheta);
         TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
-        %TR = eye(2);
+
         raw = TR*raw + TT;
         disp = TR*disp + TT(:,1:2);
     end
@@ -97,8 +99,11 @@ for nScan = 55:2:size(LidarScan,1)
             converge_metric = 1e-6;
             if abs(dTT) < converge_metric
                 
-                path = [path disp(:,1)];
-                %est_x = [est_x new_x];
+                tt = disp(:,2) - disp(:,1);
+                [theta, ~] = cart2pol(tt(1), tt(2))
+                pose = [pose [disp(:,1);theta]];
+
+                last_disp = disp;
 
                 %make sure our theta diff isn't just noise.  I still need
                 %to do this for the displacement
@@ -125,7 +130,7 @@ for nScan = 55:2:size(LidarScan,1)
     
     plot(map(1,:), map(2,:), 'b.')
     
-    plot(path(1,:), path(2,:), 'mo')
+    plot(pose(1,:), pose(2,:), 'mo')
     hold off
     
     %pause so we can display things
