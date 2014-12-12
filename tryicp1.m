@@ -6,6 +6,8 @@ close all
 clc
 load newdata.mat
 
+offset=[0;0;pi/2];
+
 pose=[0;0;0];
 post_dot=[];
 
@@ -28,7 +30,7 @@ error_dtheta = deg2rad(3);
 
 %I started at 55 because that's a nice place to see a small forward and
 %turn going on
-for nScan = 1:2:size(LidarScan,1)
+for nScan = 60:2:size(LidarScan,1)
 
     disp = [[0 0];[0 1]];
 
@@ -56,9 +58,11 @@ for nScan = 1:2:size(LidarScan,1)
         last_est_dtheta=est_dtheta;
         
         TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
-        phi = -(est_theta + last_est_dtheta);
+        %phi = -(est_theta + last_est_dtheta)
+        phi = pose(3,end) + (pose(3,end)-pose(3,end-1));
+        %phi = pose(3,end);
         TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
-
+        
         raw = TR*raw + TT;
         disp = TR*disp + TT(:,1:2);
     end
@@ -94,14 +98,14 @@ for nScan = 1:2:size(LidarScan,1)
         
         %we need to run the loop at least once before we check this
         if ii > 1
-            
             %Check for convergence
             converge_metric = 1e-6;
             if abs(dTT) < converge_metric
                 
                 tt = disp(:,2) - disp(:,1);
-                [theta, ~] = cart2pol(tt(1), tt(2))
-                pose = [pose [disp(:,1);theta]];
+                [theta, ~] = cart2pol(tt(1), tt(2));
+                cur = ([disp(:,1);theta] - offset)
+                pose = [pose cur];
 
                 last_disp = disp;
 
