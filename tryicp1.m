@@ -6,7 +6,7 @@ close all
 clc
 load newdata.mat
 
-path=[];
+path=[0;0];
 
 %full map
 map = [];
@@ -50,11 +50,13 @@ for nScan = 55:2:size(LidarScan,1)
         map = [map raw];
     else
  
-    if ~isempty(est_dx)
+    %if ~isempty(est_dx)
+    if size(path,2) > 1
         %make a quick guess based on the estimated dx
-        last_est_dx=est_dx;
+        %last_est_dx=est_dx;
         last_est_dtheta=est_dtheta;
-        TT = repmat(est_x(:,end) + last_est_dx, 1, size(raw,2));
+        %TT = repmat(est_x(:,end) + last_est_dx, 1, size(raw,2));
+        TT = repmat(path(:,end) + (path(:,end) - path(:,end-1)), 1, size(raw,2));
         phi = -(est_theta + last_est_dtheta);
         TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
         %TR = eye(2);
@@ -102,14 +104,14 @@ for nScan = 55:2:size(LidarScan,1)
                 
                 
                 %update our state estimates
-                if mag(est_dx + last_est_dx) > 1e-5
-                    new_x = est_x(:,end) + est_dx + last_est_dx;
-                else
-                    new_x = est_x(:,end);
-                end
+                %if mag(est_dx + last_est_dx) > 1e-5
+                %    new_x = est_x(:,end) + est_dx + last_est_dx;
+                %else
+                %    new_x = est_x(:,end);
+                %end
                 
                 path = [path disp];
-                est_x = [est_x new_x];
+                %est_x = [est_x new_x];
 
                 %make sure our theta diff isn't just noise.  I still need
                 %to do this for the displacement
@@ -131,14 +133,12 @@ for nScan = 55:2:size(LidarScan,1)
     figure(1)
     plot(raw(1,:), raw(2,:), 'r.')
     hold on
-    plot(est_x(1,:), est_x(2,:), 'k.');
+    %plot(est_x(1,:), est_x(2,:), 'k.');
     end
     
     plot(map(1,:), map(2,:), 'b.')
     
-    if ~isempty(path)
-        plot(path(1,:), path(2,:), 'mo')
-    end
+    plot(path(1,:), path(2,:), 'mo')
     hold off
     
     %pause so we can display things
