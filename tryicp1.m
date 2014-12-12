@@ -23,7 +23,7 @@ last_est_dtheta=0;
 %used to keep track of everything
 last_disp = [];
 
-converge_metric = 1e-6;
+converge_metric = 1e-4;
 
 %minimum turn, this is the error for sensing if the robot is actually
 %turning or not.  I know that the robot currently turns at 45 degrees per
@@ -31,7 +31,7 @@ converge_metric = 1e-6;
 %error_dtheta = deg2rad(3);
 
 pointer_scale = 0.25;
-for nScan = 60:2:size(LidarScan,1)
+for nScan = 1:2:size(LidarScan,1)
 
     disp = [[0 1];[0 0]];
     
