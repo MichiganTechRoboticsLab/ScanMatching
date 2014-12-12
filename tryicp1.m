@@ -1,12 +1,15 @@
 %This is the first attempt at writing an icp algorithm using icp_1
 %It takes the approach of 
-
 clear all
 close all
 clc
 load newdata.mat
 
+%add some noise to our data
+%LidarScan = LidarScan.*normrnd(1,0.01,size(LidarScan,1),size(LidarScan,2));
+
 offset=[0;0;0];
+cur=offset;
 
 pose=[0;0;0];
 post_dot=[];
@@ -14,24 +17,16 @@ post_dot=[];
 %full map
 map = [];
 
-%estimated pose for the robot in the world
-est_theta = 0;
-est_dtheta = 0;
-
-last_est_dtheta=0;
-
-%used to keep track of everything
-last_disp = [];
-
-converge_metric = 1e-4;
-
-%minimum turn, this is the error for sensing if the robot is actually
-%turning or not.  I know that the robot currently turns at 45 degrees per
-%second, so anything less the that should be noted.
-%error_dtheta = deg2rad(3);
-
+converge_metric = 5e-4;
 pointer_scale = 0.25;
-for nScan = 1:3:size(LidarScan,1)
+
+lidarRange = 4;
+
+
+%radius to filter out points when running icp
+filter_radius = lidarRange*1.2;
+
+for nScan = 1:2:size(LidarScan,1)
 
     disp = [[0 1];[0 0]];
     
@@ -53,7 +48,6 @@ for nScan = 1:3:size(LidarScan,1)
         map = [map raw];
     else
  
-    %if ~isempty(est_dx)
     if size(pose,2) > 1        
         TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
         phi = pose(3,end) + (pose(3,end)-pose(3,end-1));
@@ -71,10 +65,14 @@ for nScan = 1:3:size(LidarScan,1)
         
         ii = ii + 1;
         
+        %temp_map = map;
+        temp_map = filterFarPoints(map, cur(1:2,:), filter_radius);
+
         %kill all the points which are not "close" to the world and run 1
         %iteration of icp on them
-        temp = killoutliers(map,raw, 0.1);
-        [TR,TT] = call_icp1(map,temp);
+        temp = killoutliers(temp_map, raw, 0.1);
+
+        [TR,TT] = call_icp1(temp_map,temp);
 
         %move the points sample based on the icp output and update the
         %estimated pose
@@ -90,20 +88,16 @@ for nScan = 1:3:size(LidarScan,1)
         %algorithm.  This is a pretty schotty way of convergence, as it
         %doesn't take into account if the value bounced around the setpoint
         %but it works for this application
-        dTT = mag(TT(:,1));
+        dTT = mag(TT(:,1))
         
         %we need to run the loop at least once before we check this
         if ii > 1
             %Check for convergence
             if abs(dTT) < converge_metric
-                
                 tt = disp(:,2) - disp(:,1);
                 [theta, ~] = cart2pol(tt(1), tt(2));
                 cur = ([disp(:,1);theta] - offset)
                 pose = [pose cur];
-
-                last_disp = disp;
-
                 break;
             end
         end
