@@ -31,7 +31,7 @@ converge_metric = 1e-4;
 %error_dtheta = deg2rad(3);
 
 pointer_scale = 0.25;
-for nScan = 1:2:size(LidarScan,1)
+for nScan = 1:3:size(LidarScan,1)
 
     disp = [[0 1];[0 0]];
     
