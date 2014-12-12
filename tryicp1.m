@@ -6,7 +6,7 @@ close all
 clc
 load newdata.mat
 
-offset=[0;0;pi/2];
+offset=[0;0;0];
 
 pose=[0;0;0];
 post_dot=[];
@@ -23,17 +23,18 @@ last_est_dtheta=0;
 %used to keep track of everything
 last_disp = [];
 
+converge_metric = 1e-6;
+
 %minimum turn, this is the error for sensing if the robot is actually
 %turning or not.  I know that the robot currently turns at 45 degrees per
 %second, so anything less the that should be noted.
-error_dtheta = deg2rad(3);
+%error_dtheta = deg2rad(3);
 
-%I started at 55 because that's a nice place to see a small forward and
-%turn going on
+pointer_scale = 0.25;
 for nScan = 60:2:size(LidarScan,1)
 
-    disp = [[0 0];[0 1]];
-
+    disp = [[0 1];[0 0]];
+    
     %Grab lidar angles and the scan
     a = LidarAngles;
     z = LidarScan(nScan, :);
@@ -53,14 +54,9 @@ for nScan = 60:2:size(LidarScan,1)
     else
  
     %if ~isempty(est_dx)
-    if size(pose,2) > 1
-        %make a quick guess based on the estimated dx
-        last_est_dtheta=est_dtheta;
-        
+    if size(pose,2) > 1        
         TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
-        %phi = -(est_theta + last_est_dtheta)
         phi = pose(3,end) + (pose(3,end)-pose(3,end-1));
-        %phi = pose(3,end);
         TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
         
         raw = TR*raw + TT;
@@ -68,7 +64,7 @@ for nScan = 60:2:size(LidarScan,1)
     end
     
     %sest the estimated pose diff to zero
-    est_dtheta = 0;
+    %est_dtheta = 0;
     
     ii = 0;
     while true
@@ -88,7 +84,7 @@ for nScan = 60:2:size(LidarScan,1)
         raw = real(TR * raw + TT);
         disp = real(TR * disp + TT(:,1:2));
 
-        est_dtheta = est_dtheta + acos(TR(1,1));
+        %est_dtheta = est_dtheta + acos(TR(1,1));
         
         %get the difference in TT so we know when to converge the icp
         %algorithm.  This is a pretty schotty way of convergence, as it
@@ -99,7 +95,6 @@ for nScan = 60:2:size(LidarScan,1)
         %we need to run the loop at least once before we check this
         if ii > 1
             %Check for convergence
-            converge_metric = 1e-6;
             if abs(dTT) < converge_metric
                 
                 tt = disp(:,2) - disp(:,1);
@@ -109,12 +104,6 @@ for nScan = 60:2:size(LidarScan,1)
 
                 last_disp = disp;
 
-                %make sure our theta diff isn't just noise.  I still need
-                %to do this for the displacement
-                if est_dtheta < error_dtheta;
-                    est_dtheta = 0;
-                end
-                est_theta = real(est_theta + est_dtheta + last_est_dtheta);
                 break;
             end
         end
@@ -135,6 +124,12 @@ for nScan = 60:2:size(LidarScan,1)
     plot(map(1,:), map(2,:), 'b.')
     
     plot(pose(1,:), pose(2,:), 'mo')
+    
+    pointer = disp;
+    pointer(:,2) = pointer_scale*(pointer(:,2) - pointer(:,1));
+    pointer(:,2) = pointer(:,2) + disp(:,1);
+    
+    plot(pointer(1,:), pointer(2,:), 'k-')
     hold off
     
     %pause so we can display things
