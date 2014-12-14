@@ -17,10 +17,5 @@ for ii=1:size(q,2);
         ret = [ret real([x;y])];
     end
 end
-figure(2)
-plot(q(1,:), q(2,:), 'r.');
-hold on
-plot(ret(1,:), ret(2,:), 'g.');
-hold off
 
 end

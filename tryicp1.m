@@ -4,9 +4,8 @@ clear all
 close all
 clc
 load newdata.mat
-
 %add some noise to our data
-LidarScan = LidarScan.*normrnd(1,0.01,size(LidarScan,1),size(LidarScan,2));
+LidarScan = LidarScan + normrnd(0.05,0.01,size(LidarScan,1),size(LidarScan,2));
 
 offset=[0;0;0];
 cur=offset;
@@ -22,10 +21,11 @@ pointer_scale = 0.25;
 
 lidarRange = 4;
 
-
 %radius to filter out points when running icp
 filter_radius = lidarRange*1.2;
 
+temp_map = [];
+temp_scan = [];
 for nScan = 1:5:size(LidarScan,1)
 
     disp = [[0 1];[0 0]];
@@ -64,15 +64,13 @@ for nScan = 1:5:size(LidarScan,1)
     while true
         
         ii = ii + 1;
-        
-        %temp_map = map;
-        temp_map = filterFarPoints(map, cur(1:2,:), filter_radius);
 
         %kill all the points which are not "close" to the world and run 1
         %iteration of icp on them
-        temp = killoutliers(temp_map, raw, 0.1);
-
-        [TR,TT] = call_icp1(temp_map,temp);
+        temp_scan = killoutliers(map, raw, 0.1);
+        temp_map = killoutliers(temp_scan, map, 0.1);
+        
+        [TR,TT] = call_icp1(temp_map,temp_scan);
 
         %move the points sample based on the icp output and update the
         %estimated pose
@@ -88,7 +86,7 @@ for nScan = 1:5:size(LidarScan,1)
         %algorithm.  This is a pretty schotty way of convergence, as it
         %doesn't take into account if the value bounced around the setpoint
         %but it works for this application
-        dTT = mag(TT(:,1))
+        dTT = mag(TT(:,1));
         
         %we need to run the loop at least once before we check this
         if ii > 1
@@ -107,15 +105,15 @@ for nScan = 1:5:size(LidarScan,1)
     %update the world
     map = [map raw];
 
-    
-    %plot everything
-    figure(1)
-    plot(raw(1,:), raw(2,:), 'r.')
-    hold on
-    %plot(est_x(1,:), est_x(2,:), 'k.');
     end
-    
-    plot(map(1,:), map(2,:), 'b.')
+    %plot everything
+    %%{
+    figure(1)
+    plot(map(1,:), map(2,:), 'b.');
+    hold on
+    if ~isempty(temp_map)
+        plot(temp_map(1,:), temp_map(2,:),'g.');
+    end
     
     plot(pose(1,:), pose(2,:), 'mo')
     
@@ -124,8 +122,17 @@ for nScan = 1:5:size(LidarScan,1)
     pointer(:,2) = pointer(:,2) + disp(:,1);
     
     plot(pointer(1,:), pointer(2,:), 'k-')
+    plot(raw(1,:),raw(2,:), 'r.');
+    
+    if ~isempty(temp_scan)
+        plot(temp_scan(1,:),temp_scan(2,:), 'm.');
+    end
+    
+    %legend('map','filtered map', 'pose', 'dir', 'removed scan', 'full scan')
+    
     hold off
     
     %pause so we can display things
     pause(0.1);
+    %}
 end
