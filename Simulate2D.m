@@ -96,8 +96,8 @@ plot(LidarPose(:,1),LidarPose(:,2), '.r');
 
 % Generate Lidar Sensor measurements
 LidarRange = 4.0;
-LidarAngles = deg2rad(-135):deg2rad(1):deg2rad(135);
-LidarScan = zeros(size(LidarPose,0.25), size(LidarAngles,2));
+LidarAngles = deg2rad(-135):deg2rad(0.25):deg2rad(135);
+LidarScan = zeros(size(LidarPose,1), size(LidarAngles,2));
 
 parfor n = 1:size(LidarPose,1) % For each pose
     p = LidarPose(n,:); % Current pose
