@@ -1,4 +1,4 @@
-function [ I ] = match( m, d )
+function [ mi, di ] = match( m, d )
 % MATCH - Brute force Point to Point search
 %
 % Author: Dereck Wonnacott (2014)
@@ -12,9 +12,16 @@ function [ I ] = match( m, d )
         for j=1:size(m,2)
             mp = m(:,j); 
 
-            Mdist(i, j) = sum((dp - mp).^2); % d^2 should be fine
+            Mdist(i, j) = sum((dp - mp).^2);
         end    
     end
-    [~, I] = min(Mdist, [], 2);
+    [V, I] = min(Mdist, [], 2);
+    
+    % Outlier Rejection (X * STD) 
+    i = V <= (mean(V) + std(V) * 0.25);
+    mi = I(i);
+    
+    di = 1:size(d,2);
+    di = di(i);
 
 end

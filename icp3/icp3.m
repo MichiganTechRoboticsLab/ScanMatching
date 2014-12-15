@@ -24,10 +24,10 @@ function [ t, q, s ] = icp3(m, d)
     D = d;
     for k = 1:15
         % Find the point corrispondances
-        I = match(m, D);
+        [mi, di] = match(m, D);
 
         % Solve the transform between the point sets
-        [ t, q, s ] = minimize(m(:,I), D);
+        [ t, q, s ] = minimize(m(:,mi), D(:,di));
 
         % Final Solution
         D = s * quatrotate(q',D')' - repmat(t, 1, size(D,2));
@@ -52,13 +52,15 @@ function [ t, q, s ] = icp3(m, d)
     title(['ICP Result k = ' num2str(k)]);
     
     % Plot correspondence
-    for i = 1:size(I,1)
-        plot3([m(1,I(i)) D(1,i)], [m(2,I(i)) D(2,i)], [m(3,I(i)) D(3,i)], 'r'); 
-        plot3([m(1,I(i)) d(1,i)], [m(2,I(i)) d(2,i)], [m(3,I(i)) d(3,i)], 'b'); 
+    for i = 1:size(mi,1)
+        plot3([m(1,mi(i)) D(1,di(i))], [m(2,mi(i)) D(2,di(i))], [m(3,mi(i)) D(3,di(i))], 'r'); 
+        plot3([m(1,mi(i)) d(1,di(i))], [m(2,mi(i)) d(2,di(i))], [m(3,mi(i)) d(3,di(i))], 'b'); 
     end
-    
     legend('Model', 'Data', 'Result');
     
+    
+    view(0,90)
+    pause(1)
 end
 
 
