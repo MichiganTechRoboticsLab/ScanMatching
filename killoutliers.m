@@ -7,7 +7,7 @@ function [ret] = killoutliers(p, q, error)
 
     ret = [];
 
-    for ii=1:size(q,2);
+    parfor ii=1:size(q,2);
 
         x = q(1,ii);
         y = q(2,ii);

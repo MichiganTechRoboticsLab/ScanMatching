@@ -6,10 +6,10 @@ close all
 clc
 
 % Load simulated dataset
-load newdata.mat
+load walkStraight.mat
 
 % Add noise to the dataset
-LidarScan = LidarScan + normrnd(0.05,0.01,size(LidarScan,1),size(LidarScan,2));
+%LidarScan = LidarScan + normrnd(0.05,0.01,size(LidarScan,1),size(LidarScan,2));
 
 
 offset=[0;0;0];
@@ -21,22 +21,33 @@ post_dot=[];
 % full map
 map = [];
 
-converge_metric = 5e-4;
+%converge_metric = 5e-4;
+converge_metric = 5e-3;
 pointer_scale = 0.25;
+
+LidarRange = 4;
 
 %radius to filter out points when running icp
 filter_radius = LidarRange*1.2;
 
+nScanIndex = unique(Lidar_ScanIndex);
+
 temp_map = [];
 temp_scan = [];
-for nScan = 1:5:size(LidarScan,1)
+for nScan = 1:50:size(nScanIndex)
 
     disp = [[0 1];[0 0]];
     
     %Grab lidar angles and the scan
-    a = LidarAngles;
-    z = LidarScan(nScan, :);
+    %a = LidarAngles;
+    %z = LidarScan(nScan, :);
 
+    % Retrieve each scan's points
+    nIndex = nScanIndex(nScan);
+    I = nIndex == Lidar_ScanIndex;
+    a = Lidar_Angles(I,:)';
+    z = Lidar_Ranges(I,:)';
+    
     %  Remove out of range measurements
     I = (z >= LidarRange*0.9);
     a(I) = [];
