@@ -6,35 +6,42 @@ close all
 clc
 
 % Load simulated dataset
-load walkStraight.mat
+load hall_and_room_set.mat
 
 % Add noise to the dataset
 %LidarScan = LidarScan + normrnd(0.05,0.01,size(LidarScan,1),size(LidarScan,2));
 
-
-offset=[0;0;0];
-cur=offset;
+error = [0;0;0];
 
 pose=[0;0;0];
-post_dot=[];
+pose_dot=[];
 
-% full map
+% This is what I am the last scan to, whether it be the full map or just
+% scan-by-scan
 map = [];
 
-%converge_metric = 5e-4;
-converge_metric = 5e-3;
+world = [];
+
+%are we doing a scan-to-scan implementation or a scan-to-map
+scanToScan = 1;
+
+converge_metric = 1e-3;
 pointer_scale = 0.25;
 
-LidarRange = 4;
+LidarRange = 15;
 
 %radius to filter out points when running icp
 filter_radius = LidarRange*1.2;
 
 nScanIndex = unique(Lidar_ScanIndex);
 
+Hokuyo_freq = 40; %Hz
+
 temp_map = [];
 temp_scan = [];
-for nScan = 1:50:size(nScanIndex)
+
+frame_skip = 20;
+for nScan = 1:frame_skip:size(nScanIndex)
 
     disp = [[0 1];[0 0]];
     
@@ -66,7 +73,8 @@ for nScan = 1:50:size(nScanIndex)
         % Transfrom the current scan to the current estimated pose
         % based on a constantant velocity assumption.
         if size(pose,2) > 1        
-            TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
+            %TT = repmat(pose(1:2,end) + (pose(1:2,end) - pose(1:2,end-1)), 1, size(raw,2));
+            TT = repmat(pose(1:2,end) + pose_dot(1:2), 1, size(raw,2));
             phi = pose(3,end) + (pose(3,end)-pose(3,end-1));
             TR = [cos(phi) (-sin(phi)); sin(phi) cos(phi)];
 
@@ -107,58 +115,81 @@ for nScan = 1:50:size(nScanIndex)
                 if abs(dTT) < converge_metric
                     tt = disp(:,2) - disp(:,1);
                     [theta, ~] = cart2pol(tt(1), tt(2));
-                    cur = ([disp(:,1);theta] - offset);
+                    cur = ([disp(:,1);theta]);
                     pose = [pose cur];
+                    pose_dot = pose(:,end) - pose(:,end-1);
                     break;
                 end
             end
 
         end
-
+        
         % Update the world
-        map = [map raw];
+        if scanToScan
+            map = raw;
+            world = [world raw];
+        else
+            map = [map raw];
+        end
 
     end
     
+    if ~isempty(pose_dot)
+        fprintf('%.2f m/s\n', sqrt(pose_dot(1)^2 + pose_dot(2)^2)/frame_skip*Hokuyo_freq);
+    end
+    
+    plot_scans
+    
+    %{
     
     %
     % plot everything
     %
     
+    
     % Plot Map
     figure(1)
-    plot(map(1,:), map(2,:), 'b.');
-    hold on
     
+    if scanToScan
+        if ~isempty(world)
+            plot(world(1,:), world(2,:), 'b.');
+        end
+    else
+        plot(map(1,:), map(2,:), 'b.');
+    end
+    hold on
+
     % Plot filtered map for this scan
     %  (No outliers or out of range points)
     if ~isempty(temp_map)
         plot(temp_map(1,:), temp_map(2,:),'g.');
     end
-    
+
     % Plot sensor poses
     plot(pose(1,:), pose(2,:), 'mo')
-    
+
     % Plot current orientation
     pointer = disp;
     pointer(:,2) = pointer_scale*(pointer(:,2) - pointer(:,1));
     pointer(:,2) = pointer(:,2) + disp(:,1);
     plot(pointer(1,:), pointer(2,:), 'k-')
-    
+
     % Plot raw lidar data for current scan
     plot(raw(1,:),raw(2,:), 'r.');
-    
+
     % Plot filted scan
     if ~isempty(temp_scan)
         plot(temp_scan(1,:),temp_scan(2,:), 'm.');
     end
-    
+
     % Plot Stuff
     title('Map');
     legend('Map', 'Filtered map', 'Pose', 'Orientatio', 'Raw Scan', 'Filtered Scan')
     axis equal;
     grid
     hold off
+
+    %}
     
     %pause so we can display things
     pause(0.1);
