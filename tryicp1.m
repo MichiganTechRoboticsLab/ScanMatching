@@ -2,7 +2,7 @@
 % Author: Josh M
 %
 %clear
-clear area
+clear map world pose graphStruct
 close all
 clc
 
@@ -40,9 +40,9 @@ Hokuyo_freq = 40; %Hz
 temp_map = [];
 temp_scan = [];
 
-frame_skip = 20;
+frame_skip = 50;
 
-rejection_setting = 0.1;
+rejection_setting = 0.3;
 
 scanSizes = [];
 
@@ -52,17 +52,17 @@ if ~scanToScan
     warning('Running scan-to-map, this may take a while.')
 end
 
-graph_const.n = 50;
-graph_const.m = 50;
-graph_const.width = 1; %meters
+graph.n = 150;
+graph.m = 150;
+graph.width = 2; %meters
 
-empty_mat = zeros(graph_const.n, graph_const.m);
-graph(graph_const.n,graph_const.m) = struct('data', nan(graph_const.n,graph_const.m), 'visited', empty_mat, 'n', empty_mat);
+empty_mat = zeros(graph.n, graph.m);
+graphStruct(graph.n,graph.m) = struct('data', nan(graph.n,graph.m), 'visited', empty_mat, 'n', empty_mat);
 
 visited = 0;
 
 node_cur = [25 25];
-last_node = [];
+node_last = [];
 
 frame = 1;
 for nScan = 500:frame_skip:size(nScanIndex)
@@ -154,36 +154,44 @@ for nScan = 500:frame_skip:size(nScanIndex)
             warning('you done fucked up');
         end
         
-        %nScan
         %fprintf('rej_map = %.4f, rej_raw = %.4f\n\n', rej_map, rej_raw);
         
         world = [world raw];
         scanSizes = [scanSizes size(world,2)];
 
-        last_node = node_cur;
+        node_last = node_cur;
         
-        node_x = floor(pose(1,end)/graph_const.width) + 25;
-        node_y = floor(pose(2,end)/graph_const.width) + 25;
+        node_x = floor(pose(1,end)/graph.width + graph.width/2) + 25;
+        node_y = floor(pose(2,end)/graph.width + graph.width/2) + 25;
+        
         node_cur = [node_x, node_y];
         
-        tmp = graph(node_cur(1), node_cur(2));
-        tmp_last = graph(last_node(1), last_node(2));
+        tmp = graphStruct(node_cur(1), node_cur(2));
+        tmp_last = graphStruct(node_last(1), node_last(2));
 
-        if ~isequal(last_node, node_cur)
+        if ~isequal(node_last, node_cur)
+            %filter out our last node stuff
+            graphStruct(node_last(1), node_last(2)).data = tmp_last.data(:,1:tmp_last.n:end);
+            
             fprintf('entering node [%d,%d]\n', node_cur(1), node_cur(2));
-            graph(last_node(1), last_node(2)).visited = 1;
+            graphStruct(node_last(1), node_last(2)).visited = 1;
         end
                 
         if isempty(tmp.data)
-            map = raw;
             fprintf('found empty node!\n');
+            %when you find an empty node, use the last scan
+            map = raw;
+            
+            %when you find an empty node, search for a node around it that
+            %has already been visited (and that's not the last node)
         else
             map = tmp.data;
         end
         
         if isempty(tmp.visited)
             fprintf('adding data\n');
-            graph(node_cur(1),node_cur(2)).data = [tmp.data raw];
+            graphStruct(node_cur(1),node_cur(2)).data = [tmp.data raw];
+            graphStruct(node_cur(1),node_cur(2)).n = tmp.n+1;
         end
     end
     
