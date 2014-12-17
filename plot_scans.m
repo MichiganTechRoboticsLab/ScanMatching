@@ -4,7 +4,7 @@
 % Plot Map
 figure(1)
 
-if scanToScan
+if 1
     if ~isempty(world)
         plot(world(1,:), world(2,:), 'b.');
     end

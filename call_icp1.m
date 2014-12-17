@@ -12,7 +12,6 @@ function [ tr, tt ] = call_icp1( m, d )
     m  = [m; zeros(1, size(m,2))];
     
     % Do it!
-    [tr, tt] = icp1(m,d,5,'Matching','kDtree');
+    [tr, tt] = icp1(m,d,5);
     
 end
-
