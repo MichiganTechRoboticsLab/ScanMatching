@@ -52,12 +52,12 @@ if ~scanToScan
     warning('Running scan-to-map, this may take a while.')
 end
 
-graph.n = 50;
-graph.m = 50;
-graph.width = 1; %meters
+graph_const.n = 50;
+graph_const.m = 50;
+graph_const.width = 1; %meters
 
-empty_mat = zeros(graph.n, graph.m);
-area(graph.n,graph.m) = struct('data', nan(graph.n,graph.m), 'visited', empty_mat, 'n', empty_mat);
+empty_mat = zeros(graph_const.n, graph_const.m);
+graph(graph_const.n,graph_const.m) = struct('data', nan(graph_const.n,graph_const.m), 'visited', empty_mat, 'n', empty_mat);
 
 visited = 0;
 
@@ -162,16 +162,16 @@ for nScan = 500:frame_skip:size(nScanIndex)
 
         last_node = node_cur;
         
-        node_x = floor(pose(1,end)/graph.width) + 25;
-        node_y = floor(pose(2,end)/graph.width) + 25;
+        node_x = floor(pose(1,end)/graph_const.width) + 25;
+        node_y = floor(pose(2,end)/graph_const.width) + 25;
         node_cur = [node_x, node_y];
         
-        tmp = area(node_cur(1), node_cur(2));
-        tmp_last = area(last_node(1), last_node(2));
+        tmp = graph(node_cur(1), node_cur(2));
+        tmp_last = graph(last_node(1), last_node(2));
 
         if ~isequal(last_node, node_cur)
             fprintf('entering node [%d,%d]\n', node_cur(1), node_cur(2));
-            area(last_node(1), last_node(2)).visited = 1;
+            graph(last_node(1), last_node(2)).visited = 1;
         end
                 
         if isempty(tmp.data)
@@ -183,7 +183,7 @@ for nScan = 500:frame_skip:size(nScanIndex)
         
         if isempty(tmp.visited)
             fprintf('adding data\n');
-            area(node_cur(1),node_cur(2)).data = [tmp.data raw];
+            graph(node_cur(1),node_cur(2)).data = [tmp.data raw];
         end
     end
     
