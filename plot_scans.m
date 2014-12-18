@@ -1,6 +1,8 @@
 %This script plots all of the data from the tryicp1 script.  It is not
 %included in the tryicp1 script for simplicity
 
+pointer_scale = 0.25;
+
 % Plot Map
 figure(1)
 
