@@ -40,7 +40,7 @@ end
 
 % Plot Stuff
 title('Map');
-legend('Map', 'Filtered map', 'Pose', 'Orientatio', 'Raw Scan', 'Filtered Scan')
+%legend('Map', 'Filtered map', 'Pose', 'Orientatio', 'Raw Scan', 'Filtered Scan')
 axis equal;
 grid
 hold off

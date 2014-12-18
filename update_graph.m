@@ -11,14 +11,23 @@ function [ graph, ndx, ndy, map ] = update_graph( graph, raw, ndx, ndy, pose)
 %   map for the icp system to use.  it also returns ndx and ndy represent
 %   the current graph indicies the robot is processing.
 
+% TODO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% I need to make it so that the robot knows the difference between a node
+% that is wrapped and a node that is not wrapped.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %get the previous indicies from the graph
 ndx_prev = ndx;
 ndy_prev = ndy;
 node_idx_prev = [ndx ndy]';
 
+%get real-world index of the position
+ndx_actual = floor(pose(1,end)/graph.width + graph.width/2);
+ndy_actual = floor(pose(2,end)/graph.width + graph.width/2);
+
 %calculate the current indicies for the graph
-ndx = mod(floor(pose(1,end)/graph.width + graph.width/2), graph.n) + 1;
-ndy = mod(floor(pose(2,end)/graph.width + graph.width/2), graph.m) + 1;
+ndx = mod(ndx_actual, graph.n) + 1;
+ndy = mod(ndy_actual, graph.m) + 1;
 node_idx_cur = [ndx ndy]';
 
 %grab temporary nodes
@@ -47,7 +56,14 @@ if ~isequal(node_idx_cur, node_idx_prev)
     %use the data from the current node which we already gathered
     if ~node_cur.visited
         fprintf('found node [%d,%d], using previous grid\n', ndx, ndy);
-        %map = raw;
+        
+        %store the actual value of the node in the grid, technically we
+        %wouldn't know if a node wrapped or if it actually got that far
+        %down in the matrix.
+        graph.nodemat(ndx,ndy).x = ndx_actual;
+        graph.nodemat(ndx,ndy).y = ndy_actual;
+
+        %use the data from the filtered node
         map = node_prev.data;
     else
         fprintf('revisting [%d,%d]\n', ndx, ndy);
@@ -71,5 +87,6 @@ else
     %into the world for later
     fprintf('\tlocalizing\n');
 end
+
 end
 

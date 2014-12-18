@@ -5,8 +5,11 @@
 close all
 clc
 
+profile clear
+profile on
+
 % Load dataset
-%load hallroomvn.mat
+% load hallroomvn.mat
 
 error = [0;0;0];
 pose=[0;0;0];
@@ -25,6 +28,10 @@ graph.n = 150;
 graph.m = 150;
 graph.width = 1; %meters
 graph.nodemat = repmat(struct('data', [], 'visited', 0, 'n', 0), graph.n, graph.m);
+
+%initialize the first node
+graph.nodemat(1,1).x = 1;
+graph.nodemat(1,1).y = 1;
 
 ndx = 1;
 ndy = 1;
@@ -46,7 +53,7 @@ frame_skip = 50;
 if IMU_Yaw(1) ~= 0
     IMU_Yaw = IMU_Yaw - IMU_Yaw(1);
 end
-for nScan = 200:frame_skip:size(nScanIndex)
+for nScan = 1:frame_skip:size(nScanIndex)
     
     dp = [[0 1];[0 0]];
     
@@ -59,7 +66,7 @@ for nScan = 200:frame_skip:size(nScanIndex)
     
     stamp = Lidar_Timestamp(I);
     [~,stamp_idx] = min( abs(stamp(1)-IMU_Timestamp));
-
+    
     yaw = IMU_Yaw(stamp_idx);
     
     %  Remove out of range measurements
@@ -97,17 +104,19 @@ for nScan = 200:frame_skip:size(nScanIndex)
         %update the graph and get our next map
         [ graph, ndx, ndy, map ] = update_graph( graph, raw, ndx, ndy, pose);
         %map = raw;
-
-    end
         
+    end
+    
     %pause so we can display things
     pause(0.1);
+    
+    plot_scans
     
     %not really using, but may be helpful in the future
     frame = frame + 1;
 end
 
-plot_scans
+%plot_scans
 
 profile viewer
 profile off
