@@ -23,7 +23,7 @@ temp_scan = [];
 %intitialize the graph structure
 graph.n = 150;
 graph.m = 150;
-graph.width = 2; %meters
+graph.width = 1; %meters
 graph.nodemat = repmat(struct('data', [], 'visited', 0, 'n', 0), graph.n, graph.m);
 
 ndx = 1;
@@ -99,11 +99,7 @@ for nScan = 200:frame_skip:size(nScanIndex)
         %map = raw;
 
     end
-    
-    %fprintf('\terror in the yaw: %.5f\n', rad2deg(abs(yaw - pose(3,end))));
-    
-    plot_scans
-
+        
     %pause so we can display things
     pause(0.1);
     
@@ -111,7 +107,7 @@ for nScan = 200:frame_skip:size(nScanIndex)
     frame = frame + 1;
 end
 
-%plot_scans
+plot_scans
 
 profile viewer
 profile off
