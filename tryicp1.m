@@ -39,10 +39,7 @@ Hokuyo_freq = 40; %Hz
 
 temp_map = [];
 temp_scan = [];
-
-frame_skip = 50;
-
-rejection_setting = 0.3;
+rejection_setting = 0.1;
 
 scanSizes = [];
 
@@ -54,18 +51,20 @@ end
 
 graph.n = 150;
 graph.m = 150;
-graph.width = 2; %meters
+graph.width = 0.5; %meters
 
 empty_mat = zeros(graph.n, graph.m);
-graphStruct(graph.n,graph.m) = struct('data', nan(graph.n,graph.m), 'visited', empty_mat, 'n', empty_mat);
+%graph.nodelist(graph.n,graph.m) = struct('data', nan(graph.n,graph.m), 'visited', empty_mat, 'n', empty_mat);
+graph.nodelist = repmat(struct('data', [], 'visited', 0, 'n', 0), graph.n, graph.m);
 
-visited = 0;
+ndx = 1;
+ndy = 1;
 
-node_cur = [25 25];
-node_last = [];
+node_idx_last = [];
 
 frame = 1;
-for nScan = 500:frame_skip:size(nScanIndex)
+frame_skip = 20;
+for nScan = 800:frame_skip:size(nScanIndex)
     
     disp = [[0 1];[0 0]];
     
@@ -103,95 +102,66 @@ for nScan = 500:frame_skip:size(nScanIndex)
             disp = TR*disp + TT(:,1:2);
         end
         
-        % ICP Loop for current scan
-        ii = 0;
-        while true
-            
-            ii = ii + 1;
-            
-            % Remove all points that do not have a 'near' match
-            [temp_scan, rej_map] = killoutliers(map, raw, rejection_setting);
-            [temp_map, rej_raw] = killoutliers(temp_scan, map, rejection_setting);
-            
-            %calculate union of rejections, may be useful if your
-            %calcutating rejection for a scan-to-map, but not really for a
-            %scan-to-scan
-            %rej_union = rej_map * rej_raw;
-            
-            % Execute ICP
-            [TR, TT] = call_icp1(temp_map, temp_scan);
-            
-            % Transform current scan and pose estimate to new location.
-            TR = TR(1:2,1:2); % Cheap way to only select z rotation
-            TT = repmat(TT(1:2), 1, size(raw,2));
-            
-            theta = acos(TR(1));
-            
-            raw = real(TR * raw + TT);
-            disp = real(TR * disp + TT(:,1:2));
-            
-            %get the difference in TT so we know when to converge the icp
-            %algorithm.  This is a pretty schotty way of convergence, as it
-            %doesn't take into account if the value bounced around the setpoint
-            %but it works for this application
-            dTT = mag(TT(:,1));
-            
-            %we need to run the loop at least once before we check this
-            if ii > 1
-                %Check for convergence
-                if abs(dTT) < converge_metric
-                    tt = disp(:,2) - disp(:,1);
-                    [theta, ~] = cart2pol(tt(1), tt(2));
-                    cur = ([disp(:,1);theta]);
-                    pose = [pose cur];
-                    pose_dot = pose(:,end) - pose(:,end-1);
-                    break;
-                end
-            end
-        end
-        
-        if rej_raw > 0.6
-            warning('you done fucked up');
-        end
-        
-        %fprintf('rej_map = %.4f, rej_raw = %.4f\n\n', rej_map, rej_raw);
+        [cur, pose, pose_dot, raw, disp] = manelaICP(map, raw, pose, pose_dot, ...
+            disp, rejection_setting, converge_metric);
         
         world = [world raw];
         scanSizes = [scanSizes size(world,2)];
 
-        node_last = node_cur;
+        node_idx_last = [ndx ndy]';
         
-        node_x = floor(pose(1,end)/graph.width + graph.width/2) + 25;
-        node_y = floor(pose(2,end)/graph.width + graph.width/2) + 25;
-        
-        node_cur = [node_x, node_y];
-        
-        tmp = graphStruct(node_cur(1), node_cur(2));
-        tmp_last = graphStruct(node_last(1), node_last(2));
+        % TODO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % give more space to the graph when it needs it.
+        % TODO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        if ~isequal(node_last, node_cur)
+        ndx = mod(floor(pose(1,end)/graph.width + graph.width/2), graph.n) + 1;
+        ndy = mod(floor(pose(2,end)/graph.width + graph.width/2), graph.m) + 1;
+        
+        node_idx_cur = [ndx ndy]';
+        
+        node_cur = graph.nodelist(ndx,ndy);
+        node_last = graph.nodelist(node_idx_last(1), node_idx_last(2));
+
+        if ~isequal(node_idx_last, node_idx_cur)
             %filter out our last node stuff
-            graphStruct(node_last(1), node_last(2)).data = tmp_last.data(:,1:tmp_last.n:end);
+            graph.nodelist(node_idx_last(1), node_idx_last(2)).data = node_last.data(:,1:node_last.n:end);
+            graph.nodelist(node_idx_last(1), node_idx_last(2)).visited = 1;
             
-            fprintf('entering node [%d,%d]\n', node_cur(1), node_cur(2));
-            graphStruct(node_last(1), node_last(2)).visited = 1;
+            fprintf('leaving old node\n\nentering node [%d,%d]\n', ndx, ndy);
         end
                 
-        if isempty(tmp.data)
+        if isempty(node_cur.data)
             fprintf('found empty node!\n');
             %when you find an empty node, use the last scan
             map = raw;
-            
+
+            % TODO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %when you find an empty node, search for a node around it that
-            %has already been visited (and that's not the last node)
+            %has already been visited (and that's not the last node).  If
+            %it can't find a node which isn't the last, just use raw
+            % TODO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            %{
+            surround = [[0 1]' [-1 0]' [1 0]' [0 -1]'];
+            
+            for ii=1:4
+                tmp = surround(:,ii) + node_idx_cur;
+                tmp = graphStruct(tmp(1), tmp(2));
+                if ~isequal(tmp,node_last) && ~isempty(tmp.visited)
+                    map = tmp.data;
+                    fprintf('looking at nearby node!\n');
+                    break;
+                end
+            end
+            %}
         else
-            map = tmp.data;
+            map = node_cur.data;
         end
         
-        if isempty(tmp.visited)
+        if ~node_cur.visited
             fprintf('adding data\n');
-            graphStruct(node_cur(1),node_cur(2)).data = [tmp.data raw];
-            graphStruct(node_cur(1),node_cur(2)).n = tmp.n+1;
+            graph.nodelist(ndx,ndy).data = [node_cur.data raw];
+            graph.nodelist(ndx,ndy).n = graph.nodelist(ndx,ndy).n+1;
         end
     end
     
