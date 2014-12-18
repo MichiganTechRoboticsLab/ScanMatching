@@ -25,9 +25,9 @@ end
 plot(pose(1,:), pose(2,:), 'mo')
 
 % Plot current orientation
-pointer = disp;
+pointer = dp;
 pointer(:,2) = pointer_scale*(pointer(:,2) - pointer(:,1));
-pointer(:,2) = pointer(:,2) + disp(:,1);
+pointer(:,2) = pointer(:,2) + dp(:,1);
 plot(pointer(1,:), pointer(2,:), 'k-')
 
 % Plot raw lidar data for current scan

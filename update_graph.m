@@ -46,8 +46,9 @@ if ~isequal(node_idx_cur, node_idx_prev)
     %scan as our map.  otherwise we know we're revisting and just
     %use the data from the current node which we already gathered
     if ~node_cur.visited
-        fprintf('found node [%d,%d], using previous scan\n', ndx, ndy);
-        map = raw;
+        fprintf('found node [%d,%d], using previous grid\n', ndx, ndy);
+        %map = raw;
+        map = node_prev.data;
     else
         fprintf('revisting [%d,%d]\n', ndx, ndy);
         map = node_cur.data;
